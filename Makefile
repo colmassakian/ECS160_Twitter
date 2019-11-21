@@ -1,4 +1,4 @@
-target = maxTweeter
+target = maxTweeter.x
 objs = maxTweeter.o
 
 CC     := gcc
@@ -22,7 +22,7 @@ deps := $(patsubst %.o,%.d,$(objs))
 -include $(deps)
 DEPFLAGS = -MMD -MF $(@:.o=.d)
 
-maxTweeter: $(objs)
+maxTweeter.x: $(objs)
 	@echo "CC $@"
 	$(Q)$(CC) $(CFLAGS) -o $@ $^
 
