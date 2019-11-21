@@ -47,9 +47,13 @@ int find_name(char* line)
 	return -1;
 }
 
-const char* get_field(char* line, int num)
+char* get_field(char* line, int num)
 {
-	const char* tok;
+	char* tok;
+
+	// Num is <= 0
+	if(!num)
+		return NULL;
 
 	for(tok = find_delimiter(line, ","); tok; tok = find_delimiter(NULL, ",\n"))
 	{
@@ -63,23 +67,40 @@ int main()
 {
 	FILE* stream = fopen("cl-tweets-short.csv", "r");
 
+	if(stream == NULL)
+	{
+		printf("Invalid Input Format\n");
+		return -1;
+	}
+
 	char line[LENGTH];
+	char* tmp;
+	char* name;
 	int name_column = 0;
 
 	if(fgets(line, LENGTH, stream))
 	{
-		char* tmp = strdup(line);
+		tmp = strdup(line);
 		name_column = find_name(tmp);
 	}
 	else
+	{
+		printf("Invalid Input Format\n");
 		return -1;
+	}
 
-	printf("COUNT: %d\n", name_column);
 	while (fgets(line, LENGTH, stream))
 	{
-		char* tmp = strdup(line);
-		printf("Field would be %s\n", get_field(tmp, name_column));
-		// NOTE strtok clobbers tmp
+		tmp = strdup(line);
+		name = get_field(tmp, name_column);
+		
+		if(name == NULL)
+		{
+			printf("Invalid Input Format\n");
+			return -1;
+		}
+		printf("Name is %s\n", name);
+		
 		free(tmp);
 	}
 
