@@ -46,12 +46,11 @@ void init_hash()
 // Sort the hash table and print the top n results
 void get_top_n(int n)
 {
-	bubble_sort();
+	bubble_sort(0, SIZE - 1);
 
 	for(int i = 0; i < n; i ++)
 	{
-		if(tweeter_hash[i]->name != NULL)
-			printf("Name: %s, Count: %d\n", tweeter_hash[i]->name, tweeter_hash[i]->count);
+		printf("Name: %s, Count: %d\n", tweeter_hash[i]->name, tweeter_hash[i]->count);
 	}
 }
 
@@ -75,16 +74,15 @@ int insert(char* key)
 
 	hashIndex %= SIZE;
 
-	if(length >= SIZE)
+	if(length > SIZE)
 		return -1;
 	
 	while(tweeter_hash[hashIndex]->name != NULL)
 	{
 		// Key has been inserted previously
-		if(strcmp(tweeter_hash[hashIndex]->name, key) == 0)
+		if(strncmp(tweeter_hash[hashIndex]->name, key, strlen(key)) == 0)
 		{
 			tweeter_hash[hashIndex]->count ++;
-			length ++;
 			return tweeter_hash[hashIndex]->count;
 		}
 		
@@ -97,7 +95,6 @@ int insert(char* key)
    tweeter_hash[hashIndex]->name = malloc(strlen(key));
    strcpy(tweeter_hash[hashIndex]->name, key);
    tweeter_hash[hashIndex]->count = 1;
-   length ++;
 
    return tweeter_hash[hashIndex]->count;
 }
@@ -138,7 +135,7 @@ int find_name(char* line)
 
 	for(tok = find_delimiter(line, ","); tok; tok = find_delimiter(NULL, ",\n"))
 	{
-		if(!strcmp(tok, "name"))
+		if(!strncmp(tok, "name", strlen("name")))
 			return count;
 		count ++;
 	}
@@ -185,6 +182,7 @@ int main()
 	{
 		tmp = strdup(line);
 		name_column = find_name(tmp);
+		length ++;
 	}
 	else
 	{
@@ -194,6 +192,7 @@ int main()
 
 	while (fgets(line, LENGTH, stream))
 	{
+		length ++;
 		tmp = strdup(line);
 		name = get_field(tmp, name_column);
 		
