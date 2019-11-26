@@ -66,7 +66,7 @@ int insert(char* key)
 	while(tweeter_hash[hashIndex].name != NULL)
 	{
 		// Key has been inserted previously
-		if(strncmp(tweeter_hash[hashIndex].name, key, strlen(key)) == 0)
+		if(strlen(tweeter_hash[hashIndex].name) == strlen(key) && strncmp(tweeter_hash[hashIndex].name, key, strlen(key)) == 0)
 		{
 			tweeter_hash[hashIndex].count ++;
 			return tweeter_hash[hashIndex].count;
@@ -78,7 +78,7 @@ int insert(char* key)
 		hashIndex %= SIZE;
 	}
 	// Key was not found, this is the first tweet by tweeter
-	tweeter_hash[hashIndex].name = malloc(strlen(key));
+	tweeter_hash[hashIndex].name = (char*) malloc(strlen(key) * sizeof(char));
 	if(tweeter_hash[hashIndex].name != NULL) {
 		strcpy(tweeter_hash[hashIndex].name, key);
 		tweeter_hash[hashIndex].count = 1;
@@ -125,7 +125,7 @@ int find_name(char* line)
 
 	for(tok = find_delimiter(line, ","); tok; tok = find_delimiter(NULL, ",\n"))
 	{
-		if(!strncmp(tok, "name", strlen("name")))
+		if(strlen(tok) == strlen("name") && !strncmp(tok, "name", strlen(tok)))
 			return count;
 		count ++;
 	}
@@ -165,7 +165,7 @@ int main(int argc, char* argv [])
 		printf("Invalid Input Format\n");
 		return -1;
 	}
-
+	
 	char line[LENGTH];
 	char* tmp;
 	char* name;
