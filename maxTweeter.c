@@ -10,47 +10,30 @@ typedef struct NameCountPair {
 	int count;
 } NameCountPair;
 
-NameCountPair* tweeter_hash[SIZE];
+NameCountPair tweeter_hash[SIZE];
 int length;
 
-// Sort hash table
-void bubble_sort()
+int comparator(const void* p1, const void* p2)
 {
-    int i, j;
-    NameCountPair* temp;
-    
-    for (i = 0; i < SIZE - 1; i++)
-    {
-        for (j = 0; j < (SIZE - 1 - i); j++)
-        {
-            if (tweeter_hash[j]->count < tweeter_hash[j + 1]->count)
-            {
-                temp = tweeter_hash[j];
-                tweeter_hash[j] = tweeter_hash[j + 1];
-                tweeter_hash[j + 1] = temp;
-            } 
-        }
-    }
+   int first = ((struct NameCountPair *)p1)->count;
+   int second = ((struct NameCountPair *)p2)->count;
+   return second - first;
 }
 
-// Initialize hash table entries
-void init_hash()
+void destroy_hash()
 {
 	for(int i = 0; i < SIZE; i ++)
-	{
-		tweeter_hash[i] = (NameCountPair*) malloc(sizeof(NameCountPair));
-		tweeter_hash[i]->count = 0;
-	}
+		free(tweeter_hash[i].name);
 }
 
 // Sort the hash table and print the top n results
 void get_top_n(int n)
 {
-	bubble_sort();
+	qsort((void*)tweeter_hash, sizeof(tweeter_hash) / sizeof(tweeter_hash[0]), sizeof(tweeter_hash[0]), comparator);
 
 	for(int i = 0; i < n; i ++)
 	{
-		printf("Name: %s, Count: %d\n", tweeter_hash[i]->name, tweeter_hash[i]->count);
+		printf("Name: %s, Count: %d\n", tweeter_hash[i].name, tweeter_hash[i].count);
 	}
 }
 
@@ -80,26 +63,30 @@ int insert(char* key)
 	if(length > SIZE)
 		return -1;
 	
-	while(tweeter_hash[hashIndex]->name != NULL)
+	while(tweeter_hash[hashIndex].name != NULL)
 	{
 		// Key has been inserted previously
-		if(strncmp(tweeter_hash[hashIndex]->name, key, strlen(key)) == 0)
+		if(strncmp(tweeter_hash[hashIndex].name, key, strlen(key)) == 0)
 		{
-			tweeter_hash[hashIndex]->count ++;
-			return tweeter_hash[hashIndex]->count;
+			tweeter_hash[hashIndex].count ++;
+			return tweeter_hash[hashIndex].count;
 		}
 		
 		++hashIndex;
 
 		//wrap around the table
 		hashIndex %= SIZE;
-   }
-   // Key was not found, this is the first tweet by tweeter
-   tweeter_hash[hashIndex]->name = malloc(strlen(key));
-   strcpy(tweeter_hash[hashIndex]->name, key);
-   tweeter_hash[hashIndex]->count = 1;
+	}
+	// Key was not found, this is the first tweet by tweeter
+	tweeter_hash[hashIndex].name = malloc(strlen(key));
+	if(tweeter_hash[hashIndex].name != NULL) {
+		strcpy(tweeter_hash[hashIndex].name, key);
+		tweeter_hash[hashIndex].count = 1;
+	}
+   	else
+   		return -1;
 
-   return tweeter_hash[hashIndex]->count;
+   return tweeter_hash[hashIndex].count;
 }
 
 // Slight modified version of strtok to treat consecutive 
@@ -183,8 +170,6 @@ int main(int argc, char* argv [])
 	char* tmp;
 	char* name;
 	int name_column = 0;
-
-	init_hash();
 	
 	// Read first line to get column number for "name"
 	if(fgets(line, LENGTH, stream))
@@ -221,6 +206,7 @@ int main(int argc, char* argv [])
 	}
 
 	get_top_n(10);
+	destroy_hash();
 
 	return 0;
 }
