@@ -46,7 +46,7 @@ void init_hash()
 // Sort the hash table and print the top n results
 void get_top_n(int n)
 {
-	bubble_sort(0, SIZE - 1);
+	bubble_sort();
 
 	for(int i = 0; i < n; i ++)
 	{
@@ -61,6 +61,9 @@ int hash(char* input) {
 	for (int i = 0; i < strlen(input); i++)
 	    hash = hash * 31 + input[i];
 
+	if(hash < 0)
+		hash *= -1;
+
 	return hash;
 }
 
@@ -73,7 +76,7 @@ int insert(char* key)
 		hashIndex *= -1;
 
 	hashIndex %= SIZE;
-
+	
 	if(length > SIZE)
 		return -1;
 	
@@ -160,9 +163,15 @@ char* get_field(char* line, int num)
 	return NULL;
 }
 
-int main()
+int main(int argc, char* argv [])
 {
-	FILE* stream = fopen("cl-tweets-short-clean.csv", "r");
+	if(argc != 2)
+	{
+		printf("Invalid Input Format\n");
+		return -1;
+	}
+		
+	FILE* stream = fopen(argv[1], "r");
 
 	if(stream == NULL)
 	{
