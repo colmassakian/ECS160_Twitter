@@ -60,7 +60,7 @@ int insert(char* key)
 
 	hashIndex %= SIZE;
 	
-	if(length > SIZE)
+	if(length >= SIZE)
 		return -1;
 	
 	while(tweeter_hash[hashIndex].name != NULL)
@@ -93,7 +93,7 @@ int insert(char* key)
 // appearances of the delimiter as separate
 // ie strtok treats name,,text as two entries, but we need
 // it to be treated as three, where the middle is empty
-char *find_delimiter(char * string, char const * delimiter){
+char* find_delimiter(char* string, char const * delimiter){
     static char *source = NULL;
     char *p, *res = 0;
 
@@ -117,15 +117,121 @@ char *find_delimiter(char * string, char const * delimiter){
     return res;
 }
 
-// Find the column in the csv that has the value "name"
-int find_name(char* line)
+int num_cols(char* s) 
+{ 
+    // Count variable 
+    int res = 0; 
+  
+    for (int i = 0; i < strlen(s); i ++) 
+    {
+        if (s[i] == ',') 
+            res ++; 
+    }
+  
+    return res + 1; 
+}
+
+// Returns -1 if a duplicate string is found
+int find_dups(char** columns, int num_cols)
 {
-	const char* tok;
-	int count = 1;
+	for(int i = 0; i < num_cols - 1; i ++)
+	{
+		for(int j = i + 1; j < num_cols; j ++)
+		{
+			if(strlen(columns[i]) == strlen(columns[j]) && !strncmp(columns[i], columns[j], strlen(columns[i])))
+				return -1;
+		}
+	}
+
+	// Free duplicate checking array
+	for(int i = 0; i < num_cols; i ++)
+		free(columns[i]);
+	free(columns);
+
+	return num_cols;
+}
+
+// Check if header uses quotes correctly and does not have duplicates
+int check_line(char* line, int num_cols, int usingQuotes)
+{
+	char* tok;
+	int count = 0;
 
 	for(tok = find_delimiter(line, ","); tok; tok = find_delimiter(NULL, ",\n"))
 	{
-		if(strlen(tok) == strlen("name") && !strncmp(tok, "name", strlen(tok)))
+		if(tok[0] == '"' && tok[strlen(tok) - 1] != '"')
+        	return -1;
+        
+	    if(tok[0] != '"' && tok[strlen(tok) - 1] == '"')
+	        return -1;
+
+	    if(!usingQuotes && tok[0] == '"' && tok[strlen(tok) - 1] == '"')
+	        return -1;
+
+	    if(usingQuotes && tok[0] != '"' && tok[strlen(tok) - 1] != '"')
+	        return -1;
+
+	    count ++;
+	}
+
+	if(count != num_cols + 1)
+	    return -1;
+
+	return 1;
+}
+
+// Check if header uses quotes correctly and does not have duplicates
+int check_header(char* line, int* usingQuotes)
+{
+	const char* tok;
+	int count = 0;
+	int quotes = 0;
+	int noQuotes = 0;
+	int cols = num_cols(line);
+
+	char** col_names = (char**) malloc(cols * sizeof(char*));
+	if(col_names == NULL)
+		return -1;
+
+	for(tok = find_delimiter(line, ","); tok; tok = find_delimiter(NULL, ",\n"))
+	{
+		if(tok[0] == '"' && tok[strlen(tok) - 1] != '"')
+        	return -1;
+        
+	    if(tok[0] != '"' && tok[strlen(tok) - 1] == '"')
+	        return -1;
+
+	    if(tok[0] == '"' && tok[strlen(tok) - 1] == '"')
+	        quotes = 1;
+
+	    if(tok[0] != '"' && tok[strlen(tok) - 1] != '"')
+	        noQuotes = 1;
+
+	    if(quotes && noQuotes)
+	    	return -1;
+
+	    col_names[count] = (char*)malloc(strlen(tok) * sizeof(char));
+	    if(col_names[count] == NULL)
+	    	return -1;
+	    strcpy(col_names[count], tok);
+	    count ++;
+	}
+
+	*usingQuotes = quotes;
+	return find_dups(col_names, cols);
+}
+
+// Find the column in the csv that has the value "name"
+int find_name(char* line, int usingQuotes)
+{
+	const char* tok;
+	int count = 1;
+	
+	for(tok = find_delimiter(line, ","); tok; tok = find_delimiter(NULL, ",\n"))
+	{
+		if(usingQuotes == 0 && strlen(tok) == strlen("name") && !strncmp(tok, "name", strlen(tok)))
+			return count;
+		if(usingQuotes == 1 && strlen(tok) == strlen("\"name\"") && !strncmp(tok, "\"name\"", strlen(tok)))
 			return count;
 		count ++;
 	}
@@ -134,7 +240,7 @@ int find_name(char* line)
 
 
 // Get the text from the specified column in the csv
-char* get_field(char* line, int num)
+char* get_field(char* line, int num, int usingQuotes)
 {
 	char* tok;
 
@@ -145,7 +251,16 @@ char* get_field(char* line, int num)
 	for(tok = find_delimiter(line, ","); tok; tok = find_delimiter(NULL, ",\n"))
 	{
 		if(!--num)
-			return tok;
+	    {
+            // Remove quotes from string
+	        if(usingQuotes)
+	        {
+	            tok ++;
+	            tok[strlen(tok) - 1] = 0;
+	        }
+
+	        return tok;
+	    }
 	}
 	return NULL;
 }
@@ -154,7 +269,7 @@ int main(int argc, char* argv [])
 {
 	if(argc != 2)
 	{
-		printf("Invalid Input Format\n");
+		printf("Invalid input format\n");
 		return -1;
 	}
 		
@@ -162,46 +277,65 @@ int main(int argc, char* argv [])
 
 	if(stream == NULL)
 	{
-		printf("Invalid Input Format\n");
+		printf("Can't open file\n");
 		return -1;
 	}
 	
 	char line[LENGTH];
 	char* tmp;
+	char* tmp_header;
 	char* name;
+	char* tmp_name;
+	int name_check;
+	int num_cols = 0;
+	int usingQuotes = 0;
 	int name_column = 0;
 	
 	// Read first line to get column number for "name"
 	if(fgets(line, LENGTH, stream))
 	{
 		tmp = strdup(line);
-		name_column = find_name(tmp);
+		tmp_header = strdup(line);
+		num_cols = check_header(tmp_header, &usingQuotes);
+		if(num_cols == -1)
+		{
+			printf("Invalid header format\n");
+			return -1;
+		}
+		name_column = find_name(tmp, usingQuotes);
 		length ++;
 	}
 	else
 	{
-		printf("Invalid Input Format\n");
+		printf("Can't read header\n");
 		return -1;
 	}
 
 	while (fgets(line, LENGTH, stream))
 	{
-		length ++;
 		tmp = strdup(line);
-		name = get_field(tmp, name_column);
+		tmp_name = strdup(line);
+		name_check = check_line(tmp_name, num_cols, usingQuotes);
+		if(name_check == -1)
+		{
+			printf("Invalid line format\n");
+			return -1;
+		}
+		name = get_field(tmp, name_column, usingQuotes);
 		
 		if(name == NULL)
 		{
-			printf("Invalid Input Format\n");
+			printf("Can't find name\n");
 			return -1;
 		}
 
 		if(insert(name) == -1)
 		{
-			printf("Invalid Input Format\n");
+			printf("Can't insert name\n");
 			return -1;
 		}
-		
+
+		length ++;
 		free(tmp);
 	}
 
